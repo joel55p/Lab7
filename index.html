@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+      <!-- React y Babel via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    
+    <style>
+        /* va el grid del juego */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+            grid-template-rows: repeat(3, 1fr);
+            height: 300px;
+        }
+
+        .cell {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+
+
+    </style>
+
+    <div id="root"></div>
+    <script type="text/babel">
+        // Babel lo transforma en el navegador en tiempo real para que funcione con jsx
+        const root= document.getElementById('root');
+        const reactRoot = ReactDOM.createRoot(root);
+
+
+        const Segment = ({x,y}) => {
+            const style = {
+                width: '50px',
+                height: '50px',
+                backgroundColor: 'green',
+                boxSizing: 'border-box',
+                border: '1px solid black',
+                gridColumn:x,
+                gridRow:y
+            };
+
+            React.useEffect(() => {
+                console.log(`One of the values changed!:  (${x}, ${y})`);
+            }, [x,y]);
+            return <div style={style}></div>
+        }
+
+
+        const Game = () => {
+            const [direction,setDirection] = React.useState('ArrowRight');
+            const [y,setY] = React.useState(1);
+
+            React.useEffect(()=> {
+                const i =setInter
+            })
+
+            return (
+                <main className="grid" onClick={() => setY((oldY) => oldY + 1)}>
+                    <Segment x={1} y={y} />
+                    <Segment x={2} y={1} />
+                    <Segment x={3} y={1} />
+                </main>
+            )
+        }
+
+
+        const App = () => {
+            return (
+                <Game />
+            )
+        }
+
+        //Codigo del movimiento
+        reactRoot.render(<App />);
+    </script>
+    
+</body>
+</html>
