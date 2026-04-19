@@ -31,6 +31,25 @@
     .snake-head { background: #4ade80; } /* la cabeza verde claro */
     .snake-body { background: #16a34a; } /* el cuerpo verde oscuro */
     .food { background: skyblue; border-radius: 50%; } /* comidita va  a estar en azul y tambien va a ser circular  */
+    .game    { display:flex; flex-direction:column; align-items:center; gap:10px; } /* contenedor del juego para centrar y separar el tablero del puntaje */
+    .score   { font-size: 20px; } 
+
+    .overlay { /* pantalla de game over o mensaje de inicio */
+        position: absolute; inset: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 12px;
+    }
+    .overlay h2 { margin: 0; font-size: 24px; }
+    .overlay p  { margin: 0; color: #aaa; }
+
+    button { /* estilo de boton para reiniciar o empezar el juego */
+        padding: 8px 20px; font-size: 14px; font-family: monospace;
+        cursor: pointer; background: #222; color: white;
+        border: 2px solid #555; border-radius: 4px;
+    }
+    button:hover { background: #333; }
+    .hint { color: #555; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -111,14 +130,29 @@
         return null;
     }
 
+    //-----Score------
+    // Recibe el puntaje como prop y solo lo muestra por lo que  no sabe nada del juego.
+    function Score({ score }) {
+        return (
+            <div className="score">
+                Score: <b>{score}</b>
+            </div>
+        );
+    }
 
 
-
-
-
-
-
-
+    // ------ GameOverScreen -------
+    // Se va  muestrar por  encima del tablero cuando el player pierde.
+    // Va a recibir el puntaje final y una funcion para reiniciar.
+    function GameOverSc({ score, onRestart }) {
+        return (
+            <div className="overlay">
+                <h2>Game Over Bruh </h2>
+                <p>Score: <b>{score}</b></p>
+                <button onClick={onRestart}>Reiniciar</button>
+            </div>
+        );
+    }
 
 
 
@@ -130,15 +164,23 @@
     const [snake,     setSnake]     = useState([[10,12],[10,11],[10,10]]);
     const [food,      setFood]      = useState([5, 10]); // posición inicial de food
     const [direction, setDirection] = useState('RIGHT');
+    const [score,     setScore]     = useState(0);
+    const [gameOver,  setGameOver]  = useState(false);
 
     // Los refs son  realmente necesarios para que el interval siempre vea los valores mas recientes.
     // ya que sin los Refs snake y direction se "congelan" en su valor inicial dentro del interval.
     const snakeRef = useRef(snake);
     const dirRef   = useRef(direction);
     const foodRef  = useRef(food); //ref para la comida
+    const scoreRef   = useRef(score);
+    const gameOverRef= useRef(gameOver);
+
+
     useEffect(() => { snakeRef.current = snake;     }, [snake]);
     useEffect(() => { dirRef.current   = direction; }, [direction]);
     useEffect(() => { foodRef.current  = food;      }, [food]);
+    useEffect(() => { scoreRef.current    = score;    }, [score]);
+    useEffect(() => { gameOverRef.current = gameOver; }, [gameOver]);
 
 
     // Ahora el teclad para justamente cambiar la dirección 
@@ -161,9 +203,25 @@
     //  bucle del juego que se ejecuta cada 150ms para mover a la snake
     useEffect(() => {
       const interval = setInterval(() => {
+
+        if (gameOverRef.current) return; // si ya se acabo el juego, no hacer nada
         const s = snakeRef.current;
         const [dr, dc] = MOVES[dirRef.current];
         const newHead  = [s[0][0] + dr, s[0][1] + dc];
+
+        // Colision con paredes: si la nueva cabeza esta fuera del tablero, se acaba el juego
+        if (newHead[0] < 0 || newHead[0] >= ROWS ||
+            newHead[1] < 0 || newHead[1] >= COLS) {
+            setGameOver(true);
+            return;
+        }
+        //Colision con el cuerpo: si la nueva cabeza coincide con alguna parte del cuerpo, se acaba el juego
+        // slice(0,-1) excluye la cola porque ella se va a mover justo al momento
+        if (s.slice(0,-1).some(([r,c]) => r === newHead[0] && c === newHead[1])) {
+            setGameOver(true);
+            return;
+        }
+
 
         //Se ve que la snake se mueve
         // El movimiento se basa en que agrega nueva cabeza al frente y  quita el ultimo segmento del array
@@ -175,6 +233,7 @@
         if (ateFood) {
             const newSnake = [newHead, ...s]; // aqui es donde crece que agrega cabeza pero no quita cola
             setSnake(newSnake);
+            setScore(prev => prev + 1); // aumenta el puntaje 
             setFood(randomFood(newSnake));    // genera nueva comida en otro lugar
         } else {
             setSnake([newHead, ...s.slice(0, -1)]); // mueve normal
@@ -184,15 +243,32 @@
       return () => clearInterval(interval); // limpieza al desmontar o cambiar de direccion
     }, []);
 
+    // Se reinicia el juego- valores por default
+    const restart = () => {
+        const s = [[10,12],[10,11],[10,10]];
+        setSnake(s);
+        setFood(randomFood(s));
+        setDirection('RIGHT');
+        setScore(0);
+        setGameOver(false);
+    };
+
+
+
     return (
-        <div>
-        <Board snake={snake} food={food}>
-            <Snake segments={snake} />
-            <Food position={food} />
-        </Board>
-        </div>
-    );
-    }
+    <div className="game">
+      <Score score={score} />
+
+      <Board snake={snake} food={food}>
+        <Snake segments={snake} />
+        <Food  position={food} />
+        {gameOver && <GameOverSc score={score} onRestart={restart} />}
+      </Board>
+
+      <p className="hint">FLECHA TECLADO para moverse</p>
+    </div>
+  );
+}
 
 
 
@@ -200,7 +276,7 @@
   // ---- App ----------
   function App() {
     return <Game />;
-  }
+}
 
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
