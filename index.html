@@ -132,10 +132,10 @@
 
     //-----Score------
     // Recibe el puntaje como prop y solo lo muestra por lo que  no sabe nada del juego.
-    function Score({ score }) {
+    function Score({ score, level }) {
         return (
             <div className="score">
-                Score: <b>{score}</b>
+                Score: <b>{score}</b> | Level: <b>{level}</b>  
             </div>
         );
     }
@@ -154,7 +154,17 @@
         );
     }
 
-
+    // ----- StartScreen ------
+    // Se muestra antes de que empiece el juego.
+    function StartScreen({ onStart }) {
+        return (
+            <div className="overlay">
+                <h2> Snake Game !!</h2>
+                <p>Usa las flechas del teclado</p>
+                <button onClick={onStart}>Jugar</button>
+            </div>
+        );
+    }
 
 
   //  ----------Game ----------------
@@ -166,6 +176,7 @@
     const [direction, setDirection] = useState('RIGHT');
     const [score,     setScore]     = useState(0);
     const [gameOver,  setGameOver]  = useState(false);
+    const [status, setStatus] = useState('inicio'); // 'xd 'esperando inicio | 'running' = jugando | 'over' = terminó
 
     // Los refs son  realmente necesarios para que el interval siempre vea los valores mas recientes.
     // ya que sin los Refs snake y direction se "congelan" en su valor inicial dentro del interval.
@@ -174,6 +185,7 @@
     const foodRef  = useRef(food); //ref para la comida
     const scoreRef   = useRef(score);
     const gameOverRef= useRef(gameOver);
+    const statusRef = useRef(status);
 
 
     useEffect(() => { snakeRef.current = snake;     }, [snake]);
@@ -181,9 +193,16 @@
     useEffect(() => { foodRef.current  = food;      }, [food]);
     useEffect(() => { scoreRef.current    = score;    }, [score]);
     useEffect(() => { gameOverRef.current = gameOver; }, [gameOver]);
+    useEffect(() => { statusRef.current = status; }, [status]);
 
 
-    // Ahora el teclad para justamente cambiar la dirección 
+
+
+    // El nivel sube cada 5 puntos y aumenta la velocidad
+    const getSpeed = (score) => Math.max(80, 150 - Math.floor(score / 5) * 20);
+    const level = Math.floor(score / 5) + 1; // nivel basado en el puntaje
+
+    // TECLADO: Ahora el teclad para justamente cambiar la dirección 
     useEffect(() => {
       const handler = (e) => {
         const map = {
@@ -200,11 +219,11 @@
       return () => window.removeEventListener('keydown', handler);
     }, []);
 
-    //  bucle del juego que se ejecuta cada 150ms para mover a la snake
+    // LOOP: bucle del juego que se ejecuta cada 150ms para mover a la snake
     useEffect(() => {
       const interval = setInterval(() => {
 
-        if (gameOverRef.current) return; // si ya se acabo el juego, no hacer nada
+        if (statusRef.current !== 'running') return; // si ya se acabo el juego, no hacer nada
         const s = snakeRef.current;
         const [dr, dc] = MOVES[dirRef.current];
         const newHead  = [s[0][0] + dr, s[0][1] + dc];
@@ -212,13 +231,13 @@
         // Colision con paredes: si la nueva cabeza esta fuera del tablero, se acaba el juego
         if (newHead[0] < 0 || newHead[0] >= ROWS ||
             newHead[1] < 0 || newHead[1] >= COLS) {
-            setGameOver(true);
+            setStatus('over');
             return;
         }
         //Colision con el cuerpo: si la nueva cabeza coincide con alguna parte del cuerpo, se acaba el juego
         // slice(0,-1) excluye la cola porque ella se va a mover justo al momento
         if (s.slice(0,-1).some(([r,c]) => r === newHead[0] && c === newHead[1])) {
-            setGameOver(true);
+            setStatus('over');
             return;
         }
 
@@ -238,34 +257,34 @@
         } else {
             setSnake([newHead, ...s.slice(0, -1)]); // mueve normal
         }
-        }, 150);
+        }, getSpeed(score)); // la velocidad depende del puntaje
 
       return () => clearInterval(interval); // limpieza al desmontar o cambiar de direccion
-    }, []);
+    }, [status, score]); // se vuelve a ejecutar el efecto si cambia el estado del juego o el puntaje para ajustar la velocidad
 
     // Se reinicia el juego- valores por default
-    const restart = () => {
+    
+    const startGame = () => {
         const s = [[10,12],[10,11],[10,10]];
         setSnake(s);
         setFood(randomFood(s));
         setDirection('RIGHT');
         setScore(0);
-        setGameOver(false);
+        setStatus('running');
     };
 
 
 
     return (
     <div className="game">
-      <Score score={score} />
-
+      <Score score={score} level={level} />
       <Board snake={snake} food={food}>
         <Snake segments={snake} />
         <Food  position={food} />
-        {gameOver && <GameOverSc score={score} onRestart={restart} />}
+        {status === 'inicio' && <StartScreen onStart={startGame} />}
+        {status === 'over' && <GameOverSc score={score} onRestart={startGame} />}
       </Board>
-
-      <p className="hint">FLECHA TECLADO para moverse</p>
+      <p className="hint">usa las FLECHAS TECLADO para moverte -  el nivel sube cada 5 puntos</p>
     </div>
   );
 }
@@ -273,10 +292,10 @@
 
 
 
-  // ---- App ----------
-  function App() {
-    return <Game />;
-}
+    // ---- App ----------
+    function App() {
+        return <Game />;
+    }
 
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
